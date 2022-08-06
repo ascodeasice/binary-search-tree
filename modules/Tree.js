@@ -1,12 +1,12 @@
 import Node from './Node';
 
-const Tree = (arr) => {
+const Tree = (arr = []) => {
   // Turn array into balanced BST, returns root 
   const buildTree = (array) => {
     if (array.length === 0) {
       return null;
     }
-    array.sort((a, b) => b - a);// ascending
+    array.sort((a, b) => a - b);// ascending
 
     const mid = Math.floor(array.length / 2);
     const root = Node(array[mid], buildTree(array.slice(0, mid)), buildTree(array.slice(mid + 1)));
@@ -30,14 +30,17 @@ const Tree = (arr) => {
     }
   }
 
-  //NOTE might not change the original value of the leaf
   const insertNode = (val, node = root) => {
     // duplicate
     if (find(val) !== null) {
       return;
     }
-    if (node === null) {
-      node = Node(root, null, null);
+    if (node.left === null && node.right === null) {
+      if (node.val < val) {
+        node.right = Node(val);
+      } else {
+        node.left = Node(val);
+      }
     } else if (node.val > val) {
       insertNode(val, node.left);
     } else if (node.val < val) {
@@ -46,7 +49,7 @@ const Tree = (arr) => {
   }
 
   // helper function, get minValue of the tree
-  const getMinValue = (node = root) => {
+  const getMinValue = (node) => {
     if (node === null) {
       throw new Error("Can't get min value of null node");
     }
@@ -58,46 +61,46 @@ const Tree = (arr) => {
     return minVal;
   }
 
-  // NOTE removing node gotten from find() might not change the original tree
-  const deleteNode = (val) => {
-    // node not exist in tree
-    if (find(val) === null) {
-      return;
+  // const deleteNode = (val) => {
+  // deleteHelper(val, root);
+  // }
+
+  // NOTE need to change node's left/right to modify original tree
+  // return node after deleting
+  const deleteNode = (val, node = root) => {
+    if (find(val) === null || node === null) {
+      return null;
     }
 
-    let node = find(val);
-
-    // two children
-    if (node.left !== null && node.right !== null) {
-      node.val = getMinValue(node);
-      deleteNode(getMinValue(node));
-    }
-    // no child(delete the node)
-    else if (node.left === null && node.right === null) {
-      node = null;
-    }
-    // only one child(copy the child)
-    else {
+    if (node.val < val) {
+      node.right = deleteNode(val, node.right);
+    } else if (node.val > val) {
+      node.left = deleteNode(val, node.left);
+    } else {
+      // one child or no child
       if (node.left === null) {
-        node.val = node.right.val;
-        node.right = null;
-      } else {
-        node.val = node.left.val;
-        node.left = null;
+        return node.right;
+      } else if (node.right === null) {
+        return node.left;
       }
+      // two children
+      node.val = getMinValue(node.right);
+      node.right = deleteNode(getMinValue(node.right), node.right);
     }
+
+    return node;
   }
 
   // BFS the tree, and provide each node as callback argument
   // if no function is given, return array of values
   const levelOrder = (callback) => {
     const queue = [root];
+    const result = []
 
     // no function parameter is given
     if (typeof callback === 'undefined') {
-      const result = []
-      callback = (val) => {
-        result.push(val);
+      callback = (node) => {
+        result.push(node.val);
       }
     }
 
@@ -117,10 +120,10 @@ const Tree = (arr) => {
 
   // if no function is given, return array of values
   const inorder = (callback, node = root) => {
+    const result = []
     if (typeof callback === 'undefined') {
-      const result = []
-      callback = (val) => {
-        result.push(val);
+      callback = (node) => {
+        result.push(node.val);
       }
     }
 
@@ -129,16 +132,16 @@ const Tree = (arr) => {
     }
     inorder(callback, node.left);
     callback(node);
-    inorder(node.right);
+    inorder(callback, node.right);
     return result;
   }
 
   // if no function is given, return array of values
   const preorder = (callback, node = root) => {
+    const result = []
     if (typeof callback === 'undefined') {
-      const result = []
-      callback = (val) => {
-        result.push(val);
+      callback = (node) => {
+        result.push(node.val);
       }
     }
 
@@ -147,16 +150,16 @@ const Tree = (arr) => {
     }
     callback(node);
     preorder(callback, node.left);
-    preorder(node.right);
+    preorder(callback, node.right);
     return result;
   }
 
   // if no function is given, return array of values
   const postorder = (callback, node = root) => {
+    const result = []
     if (typeof callback === 'undefined') {
-      const result = []
-      callback = (val) => {
-        result.push(val);
+      callback = (node) => {
+        result.push(node.val);
       }
     }
 
@@ -164,12 +167,12 @@ const Tree = (arr) => {
       return result;
     }
     postorder(callback, node.left);
-    postorder(node.right);
+    postorder(callback, node.right);
     callback(node);
     return result;
   }
 
-  const height = (node) => {
+  const height = (node = root) => {
     if (node === null) {
       return 0;
     } else {
@@ -179,16 +182,16 @@ const Tree = (arr) => {
 
   // return depth of node
   // depth:number of edges in path from a given node to the tree’s root node.
-  const depth = (node, rootNode = root) => {
+  const depth = (val, rootNode = root) => {
     // not exist
-    if (find(node.val, rootNode) === null) {
+    if (find(val, rootNode) === null) {
       return -1;
     }
     if (rootNode === null) {
       return 0;
     }
 
-    return Math.max(depth(node, rootNode.left) + 1, depth(node, rootNode.right) + 1);
+    return Math.max(depth(val, rootNode.left) + 1, depth(val, rootNode.right) + 1);
   }
 
   // difference of heights of left subtree and right subtree of every node <= 1
@@ -196,7 +199,7 @@ const Tree = (arr) => {
     if (node === null) {
       return true;
     }
-    return (abs(height(node.left) - height(node.right)) <= 1
+    return (Math.abs(height(node.left) - height(node.right)) <= 1
       && isBalanced(node.left) && isBalanced(node.right));
   }
 
@@ -205,7 +208,7 @@ const Tree = (arr) => {
   }
 
   return {
-    root, buildTree, insertNode, deleteNode,
+    root, buildTree, find, insertNode, deleteNode,
     levelOrder, inorder, preorder, postorder,
     height, depth, isBalanced, rebalance
   };
